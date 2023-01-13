@@ -2,59 +2,74 @@ package com.example.springbootrestapi.controller;
 
 import com.example.springbootrestapi.bean.Student;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 public class StudentController {
-    @GetMapping("student")
-    public Student getStudent() {
-        Student student = new Student(1, "Cristovão", "Neto");
-        return student;
-    }
+    private List<Student> students = new ArrayList<Student>();
+    private int id = 0;
 
-    @GetMapping("student/path-variables/{id}/{first-name}/{last-name}")
-    public Student makeStudentWithPathVariables(@PathVariable("id") int id, @PathVariable("first-name") String firstName, @PathVariable("last-name") String lastName) {
-        return new Student(id, firstName, lastName);
+    @GetMapping("student/path-variables/{first-name}/{last-name}")
+    public ResponseEntity<Student> makeStudentWithPathVariables(@PathVariable("first-name") String firstName, @PathVariable("last-name") String lastName) {
+        Student student = new Student(this.id++, firstName, lastName);
+        this.students.add(student);
+        return new ResponseEntity<>(student, HttpStatus.CREATED);
     }
 
     @GetMapping("student/query-params")
-    public Student makeStudentWithQueryParams(@RequestParam int id, @RequestParam String firstName, @RequestParam(required = false) String lastName) {
-        return new Student(id, firstName, lastName);
+    public ResponseEntity<Student> makeStudentWithQueryParams(@RequestParam String firstName, @RequestParam(required = false) String lastName) {
+        Student student = new Student(this.id++, firstName, lastName);
+        this.students.add(student);
+        return new ResponseEntity<>(student, HttpStatus.CREATED);
     }
 
     @GetMapping("students")
-    public List<Student> getStudents() {
-        List<Student> students = new ArrayList<Student>();
-        students.add(new Student(1, "Cristovão", "Neto"));
-        students.add(new Student(2, "Ismael", "Neto"));
-        students.add(new Student(3, "Suelen", "Félix"));
-        students.add(new Student(4, "Hugo", "Figueiredo"));
-        return students;
+    public ResponseEntity<List<Student>> getStudents() {
+        return ResponseEntity.ok(this.students);
+    }
+
+    @GetMapping("students/{id}")
+    public ResponseEntity<Student> getStudent(@PathVariable int id) {
+        try {
+        Student student = this.students.get(id);
+        return ResponseEntity.ok(student);
+        } catch (IndexOutOfBoundsException e) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
     }
 
     @PostMapping("students")
-    @ResponseStatus(HttpStatus.CREATED)
-    public Student createStudent(@RequestBody Student student) {
-        System.out.println(student.getId());
-        System.out.println(student.getFirstName());
-        System.out.println(student.getLastName());
-        return student;
+    public ResponseEntity<Student> createStudent(@RequestBody Student student) {
+        student.setId(this.id++);
+        this.students.add(student);
+        return new ResponseEntity<>(student, HttpStatus.CREATED);
     }
 
     @PutMapping("students/{id}")
-    public Student updateStudent(@PathVariable int id, @RequestBody Student student) {
-        System.out.println(student.getFirstName());
-        System.out.println(student.getLastName());
-        return student;
+    public ResponseEntity<Student> updateStudent(@PathVariable int id, @RequestBody Student student) {
+        try {
+            this.students.set(id, student);
+            student.setId(id);
+            return ResponseEntity.ok(student);
+        } catch (IndexOutOfBoundsException e) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
     }
 
     @DeleteMapping("students/{id}")
-    public String deleteStudent(@PathVariable int id) {
-        return "Student of id " + id + " deleted successfully";
+    public ResponseEntity<String> deleteStudent(@PathVariable int id) {
+        try {
+            Student student = this.students.stream().filter(s -> s.getId() == id).collect(Collectors.toList()).get(0);
+            this.students.remove(student);
+            return ResponseEntity.ok("Student of id " + id + " deleted successfully");
+        } catch (IndexOutOfBoundsException e) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
     }
-
 
 }
